@@ -8,7 +8,7 @@
     "build": "vite build --base=/assets/taq_theme/TAQ_UI/ && npm run copy-html-entry",
     "lint": "oxlint",
     "preview": "vite preview",
-    "copy-html-entry": "copy ..\\taq_theme\\public\\TAQ_UI\\index.html ..\\taq_theme\\www\\TAQ_UI.html"
+    "copy-html-entry": "node -e \"const fs = require('fs'); fs.copyFileSync('../taq_theme/public/TAQ_UI/index.html', '../taq_theme/www/TAQ_UI.html')\""
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.2",
