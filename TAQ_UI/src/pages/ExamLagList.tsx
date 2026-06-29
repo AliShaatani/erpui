@@ -3,8 +3,10 @@ import { Table, Button, Space, Popconfirm, message } from 'antd';
 import { useFrappeGetDocList, useFrappeDeleteDoc } from 'frappe-react-sdk';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const ExamLagList: React.FC = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { deleteDoc } = useFrappeDeleteDoc();
 
@@ -17,32 +19,32 @@ export const ExamLagList: React.FC = () => {
   const handleDelete = async (name: string) => {
     try {
       await deleteDoc('exam_lag_data', name);
-      message.success('Committee deleted successfully');
+      message.success(t('save_success'));
       mutate();
     } catch (err: any) {
-      message.error(err.message || 'Failed to delete committee');
+      message.error(err.message || t('save_error'));
     }
   };
 
   const columns = [
     {
-      title: 'Committee ID / Year',
+      title: t('exam_committee') + ' ID',
       dataIndex: 'name',
       key: 'name',
       render: (text: string) => (
-        <Link to={`/TAQ_UI/exam_lag_data/${text}`} className="font-semibold text-indigo-600 hover:text-indigo-900">
+        <Link to={`/TAQ_UI/exam_lag_data/${text}`} className="font-bold text-indigo-600 hover:text-indigo-900 transition-colors">
           {text}
         </Link>
       ),
     },
     {
-      title: 'Created Date',
+      title: t('field_cert_date'),
       dataIndex: 'creation',
       key: 'creation',
       render: (text: string) => new Date(text).toLocaleDateString(),
     },
     {
-      title: 'Actions',
+      title: t('actions'),
       key: 'actions',
       render: (_: any, record: any) => (
         <Space size="middle">
@@ -50,17 +52,18 @@ export const ExamLagList: React.FC = () => {
             type="text"
             icon={<EditOutlined className="text-blue-600" />}
             onClick={() => navigate(`/TAQ_UI/exam_lag_data/${record.name}`)}
+            className="hover:bg-blue-50 font-medium"
           >
-            Edit
+            {t('edit')}
           </Button>
           <Popconfirm
-            title="Are you sure you want to delete this committee?"
+            title={t('confirm_delete')}
             onConfirm={() => handleDelete(record.name)}
-            okText="Yes"
-            cancelText="No"
+            okText={t('yes')}
+            cancelText={t('no')}
           >
-            <Button type="text" danger icon={<DeleteOutlined />}>
-              Delete
+            <Button type="text" danger icon={<DeleteOutlined />} className="hover:bg-red-50 font-medium">
+              {t('delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -69,16 +72,19 @@ export const ExamLagList: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 m-0">Exam Committees</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center border-b pb-4 flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 m-0">{t('menu_committees')}</h1>
+          <p className="text-slate-500 text-sm mt-1">Review and manage active assessment panels and oral exam boards</p>
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => navigate('/TAQ_UI/exam_lag_data/new')}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-indigo-600 hover:bg-indigo-700 h-10 px-5 rounded-lg shadow-sm font-semibold"
         >
-          Create Committee
+          {t('create_new')}
         </Button>
       </div>
 
@@ -88,7 +94,7 @@ export const ExamLagList: React.FC = () => {
         rowKey="name"
         loading={isLoading}
         pagination={{ pageSize: 15 }}
-        className="shadow-sm border rounded-lg overflow-hidden"
+        className="shadow-sm border border-slate-100 rounded-xl overflow-hidden"
       />
     </div>
   );

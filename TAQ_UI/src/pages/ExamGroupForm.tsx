@@ -5,8 +5,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { SaveOutlined, ArrowLeftOutlined, SearchOutlined, DeleteOutlined } from '@ant-design/icons';
 import { LinkSelect } from '../components/LinkSelect';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const ExamGroupForm: React.FC = () => {
+  const { t } = useLanguage();
   const { name } = useParams<{ name: string }>();
   const isEdit = name && name !== 'new';
   const navigate = useNavigate();
@@ -15,7 +17,6 @@ export const ExamGroupForm: React.FC = () => {
   const { createDoc } = useFrappeCreateDoc();
   const { updateDoc } = useFrappeUpdateDoc();
   
-  // Whitelisted method caller (using post call)
   const { call: callGetPreachers, loading: loadingPreachers } = useFrappePostCall(
     'taq_theme.taq_ui.api.get_preachers_stateless'
   );
@@ -49,13 +50,12 @@ export const ExamGroupForm: React.FC = () => {
     const limit = form.getFieldValue('count_to_exam') || '30';
     try {
       const response = await callGetPreachers({ count_to_exam: parseInt(limit, 10) });
-      // The API return shape: the result is inside response.message
       if (response && response.message) {
         const preachers = response.message as any[];
         if (preachers.length === 0) {
-          message.warning('No preachers found with status "Scheduling an appointment"');
+          message.warning(t('get_preachers_warning'));
         } else {
-          message.success(`Successfully loaded ${preachers.length} candidate preachers`);
+          message.success(`${t('get_preachers_success')}: ${preachers.length}`);
         }
         
         const rows = preachers.map((p) => ({
@@ -75,7 +75,7 @@ export const ExamGroupForm: React.FC = () => {
 
   const handleSave = async (values: any) => {
     if (preachersTable.length === 0) {
-      message.error('Please load candidate preachers using the "Get Preachers" button.');
+      message.error(t('get_preachers_empty'));
       return;
     }
 
@@ -91,14 +91,14 @@ export const ExamGroupForm: React.FC = () => {
 
       if (isEdit) {
         await updateDoc('exam_group_date', name, payload);
-        message.success('Exam schedule updated successfully');
+        message.success(t('save_success'));
       } else {
         await createDoc('exam_group_date', payload);
-        message.success('Exam schedule created successfully');
+        message.success(t('save_success'));
       }
       navigate('/TAQ_UI/exam_group_date');
     } catch (err: any) {
-      message.error(err.message || 'Failed to save exam schedule');
+      message.error(err.message || t('save_error'));
     } finally {
       setIsSaving(false);
     }
@@ -110,32 +110,32 @@ export const ExamGroupForm: React.FC = () => {
 
   const columns = [
     {
-      title: 'Applicant ID',
+      title: t('candidate_id'),
       dataIndex: 'waed_info',
       key: 'waed_info',
     },
     {
-      title: 'Full Name',
+      title: t('candidate_name'),
       dataIndex: 'full_name',
       key: 'full_name',
     },
     {
-      title: 'Phone',
+      title: t('candidate_phone'),
       dataIndex: 'phone',
       key: 'phone',
     },
     {
-      title: 'Office',
+      title: t('candidate_office'),
       dataIndex: 'office',
       key: 'office',
     },
     {
-      title: 'Address',
+      title: t('candidate_address'),
       dataIndex: 'address',
       key: 'address',
     },
     {
-      title: 'Action',
+      title: t('actions'),
       key: 'action',
       render: (_: any, __: any, index: number) => (
         <Button
@@ -150,21 +150,21 @@ export const ExamGroupForm: React.FC = () => {
 
   if (isEdit && isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Spin size="large" tip="Loading schedule details..." />
+      <div className="flex h-96 items-center justify-center">
+        <Spin size="large" tip={t('loading')} />
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center border-b pb-4 flex-wrap gap-4">
         <Space>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/TAQ_UI/exam_group_date')}>
-            Back to List
+            {t('back_to_list')}
           </Button>
-          <h1 className="text-2xl font-bold text-gray-800 m-0">
-            {isEdit ? `Edit Exam Schedule: ${name}` : 'Schedule New Exam Group'}
+          <h1 className="text-2xl font-black text-slate-800 m-0">
+            {isEdit ? `${t('edit')}: ${name}` : t('create_new')}
           </h1>
         </Space>
         <Button
@@ -172,69 +172,73 @@ export const ExamGroupForm: React.FC = () => {
           icon={<SaveOutlined />}
           onClick={() => form.submit()}
           loading={isSaving}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-indigo-600 hover:bg-indigo-700 h-10 px-5 rounded-lg shadow-sm font-semibold"
         >
-          Save Schedule
+          {t('save_button')}
         </Button>
       </div>
 
       <Form form={form} layout="vertical" onFinish={handleSave} requiredMark={true}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card className="shadow-sm md:col-span-1">
-            <Form.Item
-              name="exam_day"
-              label="Exam Day"
-              rules={[{ required: true, message: 'Please select exam day' }]}
-            >
-              <DatePicker style={{ width: '100%' }} />
-            </Form.Item>
+        <Row gutter={[24, 24]}>
+          <Col xs={24} md={8}>
+            <Card className="shadow-sm border border-slate-100 rounded-xl">
+              <Form.Item
+                name="exam_day"
+                label={t('exam_day')}
+                rules={[{ required: true, message: t('exam_day') }]}
+              >
+                <DatePicker style={{ width: '100%', height: 40 }} className="rounded-lg" />
+              </Form.Item>
 
-            <Form.Item
-              name="exam_time"
-              label="Exam Time"
-              rules={[{ required: true, message: 'Please select exam time' }]}
-            >
-              <TimePicker format="HH:mm:ss" style={{ width: '100%' }} />
-            </Form.Item>
+              <Form.Item
+                name="exam_time"
+                label={t('exam_time')}
+                rules={[{ required: true, message: t('exam_time') }]}
+              >
+                <TimePicker format="HH:mm:ss" style={{ width: '100%', height: 40 }} className="rounded-lg" />
+              </Form.Item>
 
-            <Form.Item
-              name="examination_committee"
-              label="Examination Committee"
-              rules={[{ required: true, message: 'Please select examination committee' }]}
-            >
-              <LinkSelect doctype="exam_lag_data" placeholder="Select Committee" />
-            </Form.Item>
+              <Form.Item
+                name="examination_committee"
+                label={t('exam_committee')}
+                rules={[{ required: true, message: t('exam_committee') }]}
+              >
+                <LinkSelect doctype="exam_lag_data" />
+              </Form.Item>
 
-            <Form.Item
-              name="count_to_exam"
-              label="Preachers Limit"
-              rules={[{ required: true, message: 'Please enter limit' }]}
-            >
-              <Input type="number" min={1} />
-            </Form.Item>
+              <Form.Item
+                name="count_to_exam"
+                label={t('preachers_limit')}
+                rules={[{ required: true, message: t('preachers_limit') }]}
+              >
+                <Input type="number" min={1} className="h-10 rounded-lg" />
+              </Form.Item>
 
-            <Button
-              type="default"
-              icon={<SearchOutlined />}
-              onClick={handleGetPreachers}
-              loading={loadingPreachers}
-              className="w-full mt-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50"
-            >
-              Get Preachers
-            </Button>
-          </Card>
+              <Button
+                type="default"
+                icon={<SearchOutlined />}
+                onClick={handleGetPreachers}
+                loading={loadingPreachers}
+                className="w-full h-10 mt-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold rounded-lg"
+              >
+                {t('get_preachers_btn')}
+              </Button>
+            </Card>
+          </Col>
 
-          <Card className="shadow-sm md:col-span-3" title="Candidates to be Tested">
-            <Table
-              dataSource={preachersTable}
-              columns={columns}
-              rowKey="waed_info"
-              pagination={false}
-              className="border rounded-lg overflow-hidden"
-              locale={{ emptyText: 'No candidate preachers loaded. Click "Get Preachers" on the left.' }}
-            />
-          </Card>
-        </div>
+          <Col xs={24} md={16}>
+            <Card className="shadow-sm border border-slate-100 rounded-xl" title={<span className="font-bold text-slate-700">{t('candidates_title')}</span>}>
+              <Table
+                dataSource={preachersTable}
+                columns={columns}
+                rowKey="waed_info"
+                pagination={false}
+                className="border border-slate-100 rounded-xl overflow-hidden"
+                locale={{ emptyText: t('get_preachers_empty') }}
+              />
+            </Card>
+          </Col>
+        </Row>
       </Form>
     </div>
   );

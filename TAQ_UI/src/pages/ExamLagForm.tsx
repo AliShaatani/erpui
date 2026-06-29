@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Space, Select, Table, message, Spin, Popconfirm } from 'antd';
+import { Button, Card, Space, Select, message, Spin } from 'antd';
 import { useFrappeGetDoc, useFrappeCreateDoc, useFrappeUpdateDoc } from 'frappe-react-sdk';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PlusOutlined, DeleteOutlined, SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { LinkSelect } from '../components/LinkSelect';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const ExamLagForm: React.FC = () => {
+  const { t } = useLanguage();
   const { name } = useParams<{ name: string }>();
   const isEdit = name && name !== 'new';
   const navigate = useNavigate();
@@ -33,13 +35,13 @@ export const ExamLagForm: React.FC = () => {
   const handleSave = async () => {
     // Validate members
     if (members.length === 0) {
-      message.error('Please add at least one committee member.');
+      message.error(t('empty_members'));
       return;
     }
 
     const hasEmptyField = members.some((m) => !m.user_name || m.the_adjective === 'اختر الصفة' || !m.the_adjective);
     if (hasEmptyField) {
-      message.error('Please fill in all member names and roles.');
+      message.error(t('save_error'));
       return;
     }
 
@@ -51,14 +53,14 @@ export const ExamLagForm: React.FC = () => {
 
       if (isEdit) {
         await updateDoc('exam_lag_data', name, payload);
-        message.success('Committee updated successfully');
+        message.success(t('save_success'));
       } else {
         await createDoc('exam_lag_data', payload);
-        message.success('Committee created successfully');
+        message.success(t('save_success'));
       }
       navigate('/TAQ_UI/exam_lag_data');
     } catch (err: any) {
-      message.error(err.message || 'Failed to save committee');
+      message.error(err.message || t('save_error'));
     } finally {
       setIsSaving(false);
     }
@@ -86,21 +88,21 @@ export const ExamLagForm: React.FC = () => {
 
   if (isEdit && isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Spin size="large" tip="Loading committee details..." />
+      <div className="flex h-96 items-center justify-center">
+        <Spin size="large" tip={t('loading')} />
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center border-b pb-4 flex-wrap gap-4">
         <Space>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/TAQ_UI/exam_lag_data')}>
-            Back to List
+            {t('back_to_list')}
           </Button>
-          <h1 className="text-2xl font-bold text-gray-800 m-0">
-            {isEdit ? `Edit Committee: ${name}` : 'Create New Committee'}
+          <h1 className="text-2xl font-black text-slate-800 m-0">
+            {isEdit ? `${t('edit')}: ${name}` : t('create_new')}
           </h1>
         </Space>
         <Button
@@ -108,66 +110,69 @@ export const ExamLagForm: React.FC = () => {
           icon={<SaveOutlined />}
           onClick={handleSave}
           loading={isSaving}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-indigo-600 hover:bg-indigo-700 h-10 px-5 rounded-lg shadow-sm font-semibold"
         >
-          Save Committee
+          {t('save_button')}
         </Button>
       </div>
 
-      <Card bordered={false} className="shadow-sm">
+      <Card bordered={false} className="border border-slate-100 rounded-xl shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-base font-semibold text-gray-700 m-0">Committee Members</h3>
-          <Button type="dashed" icon={<PlusOutlined />} onClick={addMember}>
-            Add Member
+          <h3 className="text-base font-bold text-slate-700 m-0">{t('committee_members')}</h3>
+          <Button type="dashed" icon={<PlusOutlined />} onClick={addMember} className="rounded-lg">
+            {t('add_row')}
           </Button>
         </div>
 
-        <table className="w-full border-collapse border border-gray-200">
-          <thead>
-            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              <th className="border border-gray-200 p-2">Member / User Name</th>
-              <th className="border border-gray-200 p-2">Role / Adjective</th>
-              <th className="border border-gray-200 p-2 w-12"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {members.map((row, idx) => (
-              <tr key={idx}>
-                <td className="border border-gray-200 p-1 w-2/3">
-                  <LinkSelect
-                    doctype="lag_user_name"
-                    value={row.user_name}
-                    onChange={(val) => updateMemberRow(idx, 'user_name', val)}
-                    placeholder="Search name"
-                  />
-                </td>
-                <td className="border border-gray-200 p-1 w-1/3">
-                  <Select
-                    value={row.the_adjective}
-                    onChange={(val) => updateMemberRow(idx, 'the_adjective', val)}
-                    style={{ width: '100%' }}
-                    options={[
-                      { value: 'اختر الصفة', label: 'اختر الصفة' },
-                      { value: 'رئيس لجنة', label: 'رئيس لجنة' },
-                      { value: 'مقرر', label: 'مقرر' },
-                      { value: 'عضو', label: 'عضو' },
-                    ]}
-                  />
-                </td>
-                <td className="border border-gray-200 p-1 text-center">
-                  <Button type="text" danger icon={<DeleteOutlined />} onClick={() => deleteMember(idx)} />
-                </td>
+        <div className="overflow-x-auto border border-slate-100 rounded-xl">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-600 uppercase border-b border-slate-100">
+                <th className="p-3 w-2/3">{t('field_member_name')}</th>
+                <th className="p-3 w-1/3">{t('field_role')}</th>
+                <th className="p-3 w-12"></th>
               </tr>
-            ))}
-            {members.length === 0 && (
-              <tr>
-                <td colSpan={3} className="text-center text-gray-400 py-6">
-                  No members added yet. Click 'Add Member' to add a committee member.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {members.map((row, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/50">
+                  <td className="p-2">
+                    <LinkSelect
+                      doctype="lag_user_name"
+                      value={row.user_name}
+                      onChange={(val) => updateMemberRow(idx, 'user_name', val)}
+                      placeholder={t('field_member_name')}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <Select
+                      value={row.the_adjective}
+                      onChange={(val) => updateMemberRow(idx, 'the_adjective', val)}
+                      style={{ width: '100%', height: 36 }}
+                      options={[
+                        { value: 'اختر الصفة', label: 'اختر الصفة' },
+                        { value: 'رئيس لجنة', label: 'رئيس لجنة' },
+                        { value: 'مقرر', label: 'مقرر' },
+                        { value: 'عضو', label: 'عضو' },
+                      ]}
+                      className="rounded"
+                    />
+                  </td>
+                  <td className="p-2 text-center">
+                    <Button type="text" danger icon={<DeleteOutlined />} onClick={() => deleteMember(idx)} />
+                  </td>
+                </tr>
+              ))}
+              {members.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="text-center text-slate-400 py-8">
+                    {t('empty_members')}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </Card>
     </div>
   );

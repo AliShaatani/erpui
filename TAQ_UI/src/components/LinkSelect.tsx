@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Select, Spin } from 'antd';
 import { useFrappeGetCall } from 'frappe-react-sdk';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface LinkSelectProps {
   doctype: string;
@@ -21,6 +22,7 @@ export const LinkSelect: React.FC<LinkSelectProps> = ({
   labelField,
   style
 }) => {
+  const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [options, setOptions] = useState<{ value: string; label: string }[]>([]);
 
@@ -64,13 +66,13 @@ export const LinkSelect: React.FC<LinkSelectProps> = ({
 
       setOptions(opts);
     }
-  }, [data, value, labelField]);
+  }, [data, value, labelField, language]);
 
   return (
     <Select
       showSearch
       value={value}
-      placeholder={placeholder || `Select ${doctype}`}
+      placeholder={placeholder || `${t('create_new')} ${doctype}`}
       defaultActiveFirstOption={false}
       showArrow={true}
       filterOption={false}

@@ -4,8 +4,10 @@ import { useFrappeGetDocList, useFrappeDeleteDoc } from 'frappe-react-sdk';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { LinkSelect } from '../components/LinkSelect';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const WaedInfoList: React.FC = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
   const [officeFilter, setOfficeFilter] = useState<string | undefined>(undefined);
@@ -42,47 +44,47 @@ export const WaedInfoList: React.FC = () => {
   const handleDelete = async (name: string) => {
     try {
       await deleteDoc('waed_info', name);
-      message.success('Preacher record deleted successfully');
+      message.success(t('save_success'));
       mutate();
     } catch (err: any) {
-      message.error(err.message || 'Failed to delete record');
+      message.error(err.message || t('save_error'));
     }
   };
 
   const columns = [
     {
-      title: 'Full Name',
+      title: t('field_fullname'),
       dataIndex: 'namee',
       key: 'namee',
       render: (text: string, record: any) => (
-        <Link to={`/TAQ_UI/waed_info/${record.name}`} className="font-semibold text-indigo-600 hover:text-indigo-900">
+        <Link to={`/TAQ_UI/waed_info/${record.name}`} className="font-bold text-indigo-600 hover:text-indigo-900 transition-colors">
           {text || record.name}
         </Link>
       ),
     },
     {
-      title: 'National ID',
+      title: t('field_national_id'),
       dataIndex: 'num_w',
       key: 'num_w',
     },
     {
-      title: 'Phone',
+      title: t('field_phone'),
       dataIndex: 'phoone',
       key: 'phoone',
     },
     {
-      title: 'Office',
+      title: t('field_office'),
       dataIndex: 'office',
       key: 'office',
     },
     {
-      title: 'Gender',
+      title: t('field_gender'),
       dataIndex: 'gender',
       key: 'gender',
-      render: (gender: string) => gender || 'Unspecified',
+      render: (gender: string) => gender || '—',
     },
     {
-      title: 'Status',
+      title: t('field_status'),
       dataIndex: 'workflow_state',
       key: 'workflow_state',
       render: (status: string) => {
@@ -90,11 +92,11 @@ export const WaedInfoList: React.FC = () => {
         if (status === 'Accepted') color = 'green';
         if (status === 'Rejected') color = 'red';
         if (status === 'Scheduling an appointment') color = 'orange';
-        return <Tag color={color}>{status || 'Draft'}</Tag>;
+        return <Tag color={color} className="font-semibold px-2 py-0.5 rounded">{status || 'Draft'}</Tag>;
       },
     },
     {
-      title: 'Actions',
+      title: t('actions'),
       key: 'actions',
       render: (_: any, record: any) => (
         <Space size="middle">
@@ -102,17 +104,18 @@ export const WaedInfoList: React.FC = () => {
             type="text"
             icon={<EditOutlined className="text-blue-600" />}
             onClick={() => navigate(`/TAQ_UI/waed_info/${record.name}`)}
+            className="hover:bg-blue-50 font-medium"
           >
-            Edit
+            {t('edit')}
           </Button>
           <Popconfirm
-            title="Are you sure you want to delete this preacher application?"
+            title={t('confirm_delete')}
             onConfirm={() => handleDelete(record.name)}
-            okText="Yes"
-            cancelText="No"
+            okText={t('yes')}
+            cancelText={t('no')}
           >
-            <Button type="text" danger icon={<DeleteOutlined />}>
-              Delete
+            <Button type="text" danger icon={<DeleteOutlined />} className="hover:bg-red-50 font-medium">
+              {t('delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -121,28 +124,32 @@ export const WaedInfoList: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 m-0">Preachers Registration</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center border-b pb-4 flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 m-0">{t('menu_preachers')}</h1>
+          <p className="text-slate-500 text-sm mt-1">Review, register, and update details for active preachers and applicants</p>
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => navigate('/TAQ_UI/waed_info/new')}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-indigo-600 hover:bg-indigo-700 h-10 px-5 rounded-lg shadow-sm font-semibold"
         >
-          New Application
+          {t('create_new')}
         </Button>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-6 flex flex-wrap gap-4 items-center">
-        <div style={{ width: 220 }}>
+      <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex flex-wrap gap-4 items-center">
+        <div style={{ width: 240 }}>
           <Input
-            placeholder="Search by name..."
-            prefix={<SearchOutlined className="text-gray-400" />}
+            placeholder={t('search_placeholder')}
+            prefix={<SearchOutlined className="text-slate-400" />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
+            className="h-10 rounded-lg"
           />
         </div>
         <div style={{ width: 200 }}>
@@ -150,13 +157,13 @@ export const WaedInfoList: React.FC = () => {
             doctype="Offices"
             value={officeFilter}
             onChange={setOfficeFilter}
-            placeholder="Filter by Office"
+            placeholder={t('field_office')}
           />
         </div>
         <div style={{ width: 180 }}>
           <Select
-            placeholder="Filter by Gender"
-            style={{ width: '100%' }}
+            placeholder={t('field_gender')}
+            style={{ width: '100%', height: 40 }}
             value={genderFilter}
             onChange={setGenderFilter}
             allowClear
@@ -164,12 +171,13 @@ export const WaedInfoList: React.FC = () => {
               { value: 'Male', label: 'Male' },
               { value: 'Female', label: 'Female' },
             ]}
+            className="rounded-lg"
           />
         </div>
         <div style={{ width: 200 }}>
           <Select
-            placeholder="Filter by Status"
-            style={{ width: '100%' }}
+            placeholder={t('field_status')}
+            style={{ width: '100%', height: 40 }}
             value={statusFilter}
             onChange={setStatusFilter}
             allowClear
@@ -179,6 +187,7 @@ export const WaedInfoList: React.FC = () => {
               { value: 'Accepted', label: 'Accepted' },
               { value: 'Rejected', label: 'Rejected' },
             ]}
+            className="rounded-lg"
           />
         </div>
       </div>
@@ -189,7 +198,7 @@ export const WaedInfoList: React.FC = () => {
         rowKey="name"
         loading={isLoading}
         pagination={{ pageSize: 15 }}
-        className="shadow-sm border rounded-lg overflow-hidden"
+        className="shadow-sm border border-slate-100 rounded-xl overflow-hidden"
       />
     </div>
   );
