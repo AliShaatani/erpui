@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Tabs, Card, Col, Row, DatePicker, Select, Upload, message, Spin } from 'antd';
-import { useFrappeGetDoc, useFrappeCreateDoc, useFrappeUpdateDoc, useFrappeFileUpload } from 'frappe-react-sdk';
+import { useFrappeGetDoc, useFrappeCreateDoc, useFrappeUpdateDoc, useFrappeFileUpload, useFrappeGetCall } from 'frappe-react-sdk';
 import { useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { PlusOutlined, DeleteOutlined, SaveOutlined, ArrowLeftOutlined, UploadOutlined } from '@ant-design/icons';
 import { LinkSelect } from '../components/LinkSelect';
 import { SignaturePad } from '../components/SignaturePad';
 import { useLanguage } from '../contexts/LanguageContext';
+import { WorkflowSection } from '../components/WorkflowSection';
 
 const { TabPane } = Tabs;
 
@@ -22,11 +23,19 @@ export const WaedInfoForm: React.FC = () => {
   const { upload } = useFrappeFileUpload();
 
   // Load existing doc
-  const { data: preacherData, isLoading } = useFrappeGetDoc(
+  const { data: preacherData, isLoading, mutate } = useFrappeGetDoc(
     'waed_info',
     isEdit ? name : '',
     { revalidateOnFocus: false }
   );
+
+  // Check if workflow_state exists
+  const { data: workflowCheck } = useFrappeGetCall(
+    'taq_theme.taq_ui.api.check_workflow_state',
+    {},
+    'check_workflow_state'
+  );
+  const hasWorkflow = workflowCheck?.message?.has_workflow ?? false;
 
   // Child table states
   const [qualifications, setQualifications] = useState<any[]>([]);
@@ -80,7 +89,7 @@ export const WaedInfoForm: React.FC = () => {
   const handleSave = async (values: any) => {
     setIsSaving(true);
     try {
-      const docPayload = {
+      const docPayload: any = {
         ...values,
         academic_qualifications: qualifications,
         which_books_did_i_study_and_under_which_scholars: booksStudied,
@@ -89,6 +98,10 @@ export const WaedInfoForm: React.FC = () => {
         signature: signature,
         profile_picture: profilePictureUrl,
       };
+
+      if (!hasWorkflow) {
+        delete docPayload.workflow_state;
+      }
 
       if (isEdit) {
         await updateDoc('waed_info', name, docPayload);
@@ -206,6 +219,13 @@ export const WaedInfoForm: React.FC = () => {
         onFinish={handleSave}
         requiredMark={true}
       >
+        {isEdit && (
+          <WorkflowSection 
+            doctype="waed_info" 
+            docname={name!} 
+            onActionApplied={mutate} 
+          />
+        )}
         <Tabs defaultActiveKey="personal" type="card" className="shadow-sm">
           {/* TAB 1: PERSONAL INFORMATION */}
           <TabPane tab={t('personal_info')} key="personal">
@@ -309,18 +329,20 @@ export const WaedInfoForm: React.FC = () => {
                     </Upload>
                   </Form.Item>
 
-                  <Form.Item name="workflow_state" label={t('field_status')} className="w-full">
-                    <Select
-                      style={{ height: 40 }}
-                      options={[
-                        { value: 'Draft', label: 'Draft' },
-                        { value: 'Scheduling an appointment', label: 'Scheduling an appointment' },
-                        { value: 'Accepted', label: 'Accepted' },
-                        { value: 'Rejected', label: 'Rejected' },
-                      ]}
-                      className="rounded-lg"
-                    />
-                  </Form.Item>
+                  {!hasWorkflow && (
+                    <Form.Item name="workflow_state" label={t('field_status')} className="w-full">
+                      <Select
+                        style={{ height: 40 }}
+                        options={[
+                          { value: 'Draft', label: 'Draft' },
+                          { value: 'Scheduling an appointment', label: 'Scheduling an appointment' },
+                          { value: 'Accepted', label: 'Accepted' },
+                          { value: 'Rejected', label: 'Rejected' },
+                        ]}
+                        className="rounded-lg"
+                      />
+                    </Form.Item>
+                  )}
                 </Col>
               </Row>
               

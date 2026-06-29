@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Table, Button, Space, Input, Select, Tag, Popconfirm, message } from 'antd';
-import { useFrappeGetDocList, useFrappeDeleteDoc } from 'frappe-react-sdk';
+import { useFrappeGetCall, useFrappeDeleteDoc } from 'frappe-react-sdk';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { LinkSelect } from '../components/LinkSelect';
@@ -16,30 +16,20 @@ export const WaedInfoList: React.FC = () => {
 
   const { deleteDoc } = useFrappeDeleteDoc();
 
-  // Re-build Frappe filters array
-  const getFilters = () => {
-    const filters: any[] = [];
-    if (searchText) {
-      filters.push(['namee', 'like', `%${searchText}%`]);
-    }
-    if (officeFilter) {
-      filters.push(['office', '=', officeFilter]);
-    }
-    if (statusFilter) {
-      filters.push(['workflow_state', '=', statusFilter]);
-    }
-    if (genderFilter) {
-      filters.push(['gender', '=', genderFilter]);
-    }
-    return filters;
-  };
+  const { data, isValidating: isLoading, mutate } = useFrappeGetCall(
+    'taq_theme.taq_ui.api.get_preachers_list',
+    {
+      search_text: searchText || undefined,
+      office: officeFilter || undefined,
+      status: statusFilter || undefined,
+      gender: genderFilter || undefined,
+      limit: 100,
+    },
+    `preachers_list_${searchText}_${officeFilter}_${statusFilter}_${genderFilter}`
+  );
 
-  const { data: preachers, isLoading, mutate } = useFrappeGetDocList('waed_info', {
-    fields: ['name', 'namee', 'num_w', 'phoone', 'office', 'workflow_state', 'gender', 'creation'],
-    filters: getFilters(),
-    orderBy: { field: 'creation', order: 'desc' },
-    limit: 100,
-  });
+  const preachers = data?.message || [];
+
 
   const handleDelete = async (name: string) => {
     try {
