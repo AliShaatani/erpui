@@ -1,38 +1,46 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
-import { FrappeProvider } from 'frappe-react-sdk'
-function App() {
-  const [count, setCount] = useState(0)
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { FrappeProvider } from 'frappe-react-sdk';
+import { Layout } from './components/Layout';
+import { Dashboard } from './pages/Dashboard';
+import { WaedInfoList } from './pages/WaedInfoList';
+import { WaedInfoForm } from './pages/WaedInfoForm';
+import { ExamLagList } from './pages/ExamLagList';
+import { ExamLagForm } from './pages/ExamLagForm';
+import { ExamGroupList } from './pages/ExamGroupList';
+import { ExamGroupForm } from './pages/ExamGroupForm';
+import './App.css';
 
+function App() {
   return (
-	<div className="App">
-	  <FrappeProvider>
-		<div>
-	  <div>
-		<a href="https://vitejs.dev" target="_blank">
-		  <img src="/vite.svg" className="logo" alt="Vite logo" />
-		</a>
-		<a href="https://reactjs.org" target="_blank">
-		  <img src={reactLogo} className="logo react" alt="React logo" />
-		</a>
-	  </div>
-	  <h1>Vite + React + Frappe</h1>
-	  <div className="card">
-		<button onClick={() => setCount((count) => count + 1)}>
-		  count is {count}
-		</button>
-		<p>
-		  Edit <code>src/App.jsx</code> and save to test HMR
-		</p>
-	  </div>
-	  <p className="read-the-docs">
-		Click on the Vite and React logos to learn more
-	  </p>
-	  </div>
-	  </FrappeProvider>
-	</div>
-  )
+    <FrappeProvider>
+      <BrowserRouter>
+        <Layout>
+          <Routes>
+            {/* Dashboard routes */}
+            <Route path="/TAQ_UI" element={<Dashboard />} />
+            <Route path="/TAQ_UI/" element={<Dashboard />} />
+            
+            {/* Preachers (waed_info) routes */}
+            <Route path="/TAQ_UI/waed_info" element={<WaedInfoList />} />
+            <Route path="/TAQ_UI/waed_info/:name" element={<WaedInfoForm />} />
+            
+            {/* Committee (exam_lag_data) routes */}
+            <Route path="/TAQ_UI/exam_lag_data" element={<ExamLagList />} />
+            <Route path="/TAQ_UI/exam_lag_data/:name" element={<ExamLagForm />} />
+            
+            {/* Exam scheduling (exam_group_date) routes */}
+            <Route path="/TAQ_UI/exam_group_date" element={<ExamGroupList />} />
+            <Route path="/TAQ_UI/exam_group_date/:name" element={<ExamGroupForm />} />
+            
+            {/* Fallback routes */}
+            <Route path="/" element={<Navigate to="/TAQ_UI" replace />} />
+            <Route path="*" element={<Navigate to="/TAQ_UI" replace />} />
+          </Routes>
+        </Layout>
+      </BrowserRouter>
+    </FrappeProvider>
+  );
 }
 
-export default App
+export default App;

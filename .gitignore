@@ -5,3 +5,5 @@
 tags
 node_modules
 __pycache__
+/Docs
+/taq_frappe_app
