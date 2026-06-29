@@ -11,6 +11,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import arEG from 'antd/locale/ar_EG';
 import enUS from 'antd/locale/en_US';
+import { useFrappeAuth } from 'frappe-react-sdk';
+import { Spin } from 'antd';
 
 const { Header, Content, Sider } = AntLayout;
 
@@ -21,6 +23,13 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { language, toggleLanguage, t, dir } = useLanguage();
   const location = useLocation();
+  const { currentUser, isLoading: authLoading } = useFrappeAuth();
+
+  React.useEffect(() => {
+    if (!authLoading && !currentUser) {
+      window.location.href = `/login?redirect-to=${window.location.pathname}`;
+    }
+  }, [currentUser, authLoading]);
   
   const getSelectedKey = () => {
     const path = location.pathname;
@@ -52,6 +61,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       label: <Link to="/TAQ_UI/exam_group_date">{t('menu_exams')}</Link>,
     },
   ];
+
+  if (authLoading || !currentUser) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+        <Spin size="large" tip="Verifying session..." />
+      </div>
+    );
+  }
 
   return (
     <ConfigProvider
