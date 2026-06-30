@@ -1,18 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, Tabs, Card, Col, Row, DatePicker, Select, Upload, message, Spin } from 'antd';
+import { Form, Input, Button, Card, Col, Row, DatePicker, Select, Upload, message, Spin, Tag, Space } from 'antd';
 import { useFrappeGetDoc, useFrappeCreateDoc, useFrappeUpdateDoc, useFrappeFileUpload, useFrappeGetCall } from 'frappe-react-sdk';
 import { useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { PlusOutlined, DeleteOutlined, SaveOutlined, ArrowLeftOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, SaveOutlined, ArrowLeftOutlined, UploadOutlined, GlobalOutlined } from '@ant-design/icons';
 import { LinkSelect } from '../components/LinkSelect';
 import { SignaturePad } from '../components/SignaturePad';
 import { useLanguage } from '../contexts/LanguageContext';
 import { WorkflowSection } from '../components/WorkflowSection';
 
-const { TabPane } = Tabs;
-
 export const WaedInfoForm: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { name } = useParams<{ name: string }>();
   const isEdit = name && name !== 'new';
   const navigate = useNavigate();
@@ -22,10 +20,10 @@ export const WaedInfoForm: React.FC = () => {
   const { updateDoc } = useFrappeUpdateDoc();
   const { upload } = useFrappeFileUpload();
 
-  // Load existing doc
+  // Load existing doc (Passing null when creating new doc prevents API list calls)
   const { data: preacherData, isLoading, mutate } = useFrappeGetDoc(
     'waed_info',
-    isEdit ? name : '',
+    isEdit ? name : null,
     { revalidateOnFocus: false }
   );
 
@@ -47,12 +45,12 @@ export const WaedInfoForm: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (preacherData) {
+    if (preacherData && isEdit) {
       form.setFieldsValue({
         namee: preacherData.namee,
         num_w: preacherData.num_w,
         agee: preacherData.agee,
-        phoone: preacherData.phoone,
+        phoone: preacherData.phoone ? preacherData.phoone.replace(/^\+218/, '') : '',
         residence_place: preacherData.residence_place,
         place: preacherData.place,
         gender: preacherData.gender,
@@ -84,13 +82,17 @@ export const WaedInfoForm: React.FC = () => {
       setSignature('');
       setProfilePictureUrl('');
     }
-  }, [preacherData, form]);
+  }, [preacherData, isEdit, form]);
 
   const handleSave = async (values: any) => {
     setIsSaving(true);
     try {
+      // Append country code back to phone number
+      const cleanPhone = values.phoone ? `+218${values.phoone.trim()}` : '';
+
       const docPayload: any = {
         ...values,
+        phoone: cleanPhone,
         academic_qualifications: qualifications,
         which_books_did_i_study_and_under_which_scholars: booksStudied,
         shakis: scholarsList,
@@ -136,10 +138,11 @@ export const WaedInfoForm: React.FC = () => {
     return false;
   };
 
+  // Qualifications Row Manipulation
   const addQualification = () => {
     setQualifications([
       ...qualifications,
-      { certificate_type: '', specialization: '', date_of_obtaining_the_certificate: '', issuing_authority: '' },
+      { certificate_type: undefined, specialization: undefined, date_of_obtaining_the_certificate: '', issuing_authority: undefined },
     ]);
   };
 
@@ -149,12 +152,9 @@ export const WaedInfoForm: React.FC = () => {
     setQualifications(updated);
   };
 
-  const deleteQualification = (index: number) => {
-    setQualifications(qualifications.filter((_, i) => i !== index));
-  };
-
+  // Books Studied Row Manipulation
   const addBookStudied = () => {
-    setBooksStudied([...booksStudied, { sheikh_name: '', book_name: '', publication_of_the_book: '' }]);
+    setBooksStudied([...booksStudied, { sheikh_name: undefined, book_name: undefined, publication_of_the_book: '' }]);
   };
 
   const updateBookRow = (index: number, key: string, value: any) => {
@@ -163,8 +163,9 @@ export const WaedInfoForm: React.FC = () => {
     setBooksStudied(updated);
   };
 
+  // Scholars Row Manipulation
   const addScholar = () => {
-    setScholarsList([...scholarsList, { shaikh: '' }]);
+    setScholarsList([...scholarsList, { shaikh: undefined }]);
   };
 
   const updateScholarRow = (index: number, value: any) => {
@@ -173,8 +174,9 @@ export const WaedInfoForm: React.FC = () => {
     setScholarsList(updated);
   };
 
+  // Subjects Row Manipulation
   const addSubject = () => {
-    setSubjectsList([...subjectsList, { subjecte_name: '' }]);
+    setSubjectsList([...subjectsList, { subjecte_name: undefined }]);
   };
 
   const updateSubjectRow = (index: number, value: any) => {
@@ -193,23 +195,31 @@ export const WaedInfoForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center border-b pb-4 flex-wrap gap-4">
-        <Space>
+      {/* Header Panel */}
+      <div className="flex justify-between items-center border-b pb-4 flex-wrap gap-4 bg-white sticky top-0 z-20">
+        <Space size="middle">
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/TAQ_UI/waed_info')}>
             {t('back_to_list')}
           </Button>
-          <h1 className="text-2xl font-black text-slate-800 m-0">
-            {isEdit ? `${t('edit')}: ${name}` : t('create_new')}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-black text-slate-800 m-0">
+              {isEdit ? preacherData?.namee || name : 'New waed_info'}
+            </h1>
+            {!isEdit ? (
+              <Tag color="orange" className="font-semibold px-2 py-0.5 rounded">Not Saved</Tag>
+            ) : (
+              <Tag color="blue" className="font-semibold px-2 py-0.5 rounded">{preacherData?.workflow_state || 'Saved'}</Tag>
+            )}
+          </div>
         </Space>
         <Button
           type="primary"
           icon={<SaveOutlined />}
           onClick={() => form.submit()}
           loading={isSaving}
-          className="bg-indigo-600 hover:bg-indigo-700 h-10 px-5 rounded-lg shadow-sm font-semibold"
+          className="bg-black hover:bg-slate-800 h-10 px-6 rounded-lg shadow-sm font-semibold border-none"
         >
-          {t('save_button')}
+          Save
         </Button>
       </div>
 
@@ -226,291 +236,328 @@ export const WaedInfoForm: React.FC = () => {
             onActionApplied={mutate} 
           />
         )}
-        <Tabs defaultActiveKey="personal" type="card" className="shadow-sm">
-          {/* TAB 1: PERSONAL INFORMATION */}
-          <TabPane tab={t('personal_info')} key="personal">
-            <Card bordered={false} className="border border-slate-100 rounded-xl">
-              <Row gutter={[24, 0]}>
-                <Col xs={24} md={16}>
-                  <Row gutter={16}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="namee"
-                        label={t('field_fullname')}
-                        rules={[{ required: true, message: t('field_fullname') }]}
-                      >
-                        <Input className="h-10 rounded-lg" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="num_w"
-                        label={t('field_national_id')}
-                        rules={[
-                          { required: true, message: t('field_national_id') },
-                          { len: 12, message: 'Must be 12 digits' },
-                        ]}
-                      >
-                        <Input maxLength={12} className="h-10 rounded-lg" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="agee"
-                        label={t('field_age')}
-                        rules={[{ required: true, message: t('field_age') }]}
-                      >
-                        <Input className="h-10 rounded-lg" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="phoone"
-                        label={t('field_phone')}
-                        rules={[{ required: true, message: t('field_phone') }]}
-                      >
-                        <Input className="h-10 rounded-lg" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Row gutter={16}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="residence_place"
-                        label={t('field_residence')}
-                        rules={[{ required: true, message: t('field_residence') }]}
-                      >
-                        <Input className="h-10 rounded-lg" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item name="gender" label={t('field_gender')}>
-                        <LinkSelect doctype="Gender" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="marital_status"
-                        label={t('field_marital')}
-                        rules={[{ required: true, message: t('field_marital') }]}
-                      >
-                        <LinkSelect doctype="marital_status" />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="office"
-                        label={t('field_office')}
-                        rules={[{ required: true, message: t('field_office') }]}
-                      >
-                        <LinkSelect doctype="Offices" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Col>
 
-                <Col xs={24} md={8} className="flex flex-col items-center justify-start border-inline-start pl-6 pr-6">
-                  <Form.Item label={t('field_profile_picture')} className="w-full text-center">
-                    <div className="mb-4">
-                      {profilePictureUrl ? (
-                        <img
-                          src={profilePictureUrl}
-                          alt="Profile Preview"
-                          className="w-32 h-32 rounded-full object-cover border border-slate-200 mx-auto shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-32 h-32 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 border-dashed mx-auto text-slate-400">
-                          No Image
-                        </div>
-                      )}
-                    </div>
-                    <Upload beforeUpload={handleProfilePictureUpload} showUploadList={false} accept="image/*">
-                      <Button icon={<UploadOutlined />} className="rounded-lg">{t('create_new')} Image</Button>
-                    </Upload>
-                  </Form.Item>
+        <div className="space-y-8">
+          {/* Section 1: Personal Data */}
+          <Card bordered={true} className="border-slate-200 rounded-xl shadow-none" title={<span className="font-bold text-base text-slate-700">Personal data</span>}>
+            <Row gutter={24}>
+              <Col xs={24} md={12} className="space-y-4">
+                <Form.Item
+                  name="namee"
+                  label={t('field_fullname')}
+                  rules={[{ required: true, message: t('field_fullname') }]}
+                >
+                  <Input className="h-10 rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
 
-                  {!hasWorkflow && (
-                    <Form.Item name="workflow_state" label={t('field_status')} className="w-full">
-                      <Select
-                        style={{ height: 40 }}
-                        options={[
-                          { value: 'Draft', label: 'Draft' },
-                          { value: 'Scheduling an appointment', label: 'Scheduling an appointment' },
-                          { value: 'Accepted', label: 'Accepted' },
-                          { value: 'Rejected', label: 'Rejected' },
-                        ]}
-                        className="rounded-lg"
+                <Form.Item
+                  name="agee"
+                  label={t('field_age')}
+                  rules={[{ required: true, message: t('field_age') }]}
+                >
+                  <Input className="h-10 rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+
+                <Form.Item label={t('field_profile_picture')} className="mb-0">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    {profilePictureUrl ? (
+                      <img
+                        src={profilePictureUrl}
+                        alt="Profile Preview"
+                        className="w-20 h-20 rounded-lg object-cover border border-slate-200 shadow-sm"
                       />
-                    </Form.Item>
-                  )}
-                </Col>
-              </Row>
-              
-              <Form.Item
-                name="place"
-                label={t('field_address')}
-                rules={[{ required: true, message: t('field_address') }]}
-              >
-                <Input.TextArea rows={2} className="rounded-lg" />
-              </Form.Item>
+                    ) : (
+                      <div className="w-20 h-20 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200 border-dashed text-slate-400 text-xs">
+                        No Image
+                      </div>
+                    )}
+                    <Upload beforeUpload={handleProfilePictureUpload} showUploadList={false} accept="image/*">
+                      <Button icon={<UploadOutlined />} className="rounded-lg h-9 font-medium border-slate-300 hover:border-slate-400">Attach</Button>
+                    </Upload>
+                  </div>
+                </Form.Item>
+              </Col>
 
-              <div className="mt-4 border-t pt-4">
-                <h3 className="text-base font-bold text-slate-700 mb-4">Contact Channels</h3>
-                <Row gutter={16}>
-                  <Col xs={24} sm={8}>
-                    <Form.Item name="email_address" label={t('field_email')}>
-                      <Input className="h-10 rounded-lg" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <Form.Item
-                      name="facebook_page"
-                      label={t('field_facebook')}
-                      rules={[{ required: true, message: t('field_facebook') }]}
-                    >
-                      <Input className="h-10 rounded-lg" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <Form.Item name="other_pages" label={t('field_other_pages')}>
-                      <Input className="h-10 rounded-lg" />
-                    </Form.Item>
-                  </Col>
-                </Row>
+              <Col xs={24} md={12} className="space-y-4">
+                <Form.Item
+                  name="num_w"
+                  label={t('field_national_id')}
+                  rules={[
+                    { required: true, message: t('field_national_id') },
+                    { len: 12, message: 'Must be 12 digits' },
+                  ]}
+                >
+                  <Input 
+                    placeholder="ادخل الرقم الوطني" 
+                    maxLength={12} 
+                    className="h-10 rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" 
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  name="residence_place"
+                  label={t('field_residence')}
+                  rules={[{ required: true, message: t('field_residence') }]}
+                >
+                  <Input className="h-10 rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+
+                <Form.Item name="gender" label={t('field_gender')}>
+                  <LinkSelect doctype="Gender" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Section 2: Detailed Housing Information */}
+          <Card bordered={true} className="border-slate-200 rounded-xl shadow-none" title={<span className="font-bold text-base text-slate-700">Detailed Housing Information</span>}>
+            <Row gutter={24}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="place"
+                  label={t('field_address')}
+                  rules={[{ required: true, message: t('field_address') }]}
+                >
+                  <Input.TextArea rows={4} className="rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} md={12} className="space-y-4">
+                <Form.Item
+                  name="marital_status"
+                  label={t('field_marital')}
+                  rules={[{ required: true, message: t('field_marital') }]}
+                >
+                  <LinkSelect doctype="marital_status" />
+                </Form.Item>
+
+                <Form.Item
+                  name="office"
+                  label={t('field_office')}
+                  rules={[{ required: true, message: t('field_office') }]}
+                >
+                  <LinkSelect doctype="Offices" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Section 3: Contact Information */}
+          <Card bordered={true} className="border-slate-200 rounded-xl shadow-none" title={<span className="font-bold text-base text-slate-700">Contact Information</span>}>
+            <Row gutter={24}>
+              <Col xs={24} md={12} className="space-y-4">
+                <Form.Item
+                  name="phoone"
+                  label={t('field_phone')}
+                  rules={[{ required: true, message: t('field_phone') }]}
+                >
+                  <Input 
+                    addonBefore={<Space><span style={{ fontSize: '16px' }}>🇱🇾</span><span className="text-slate-500 font-semibold">+218</span></Space>} 
+                    className="h-10 rounded-lg overflow-hidden" 
+                    placeholder="9XXXXXXXX"
+                  />
+                </Form.Item>
+
+                <Form.Item name="email_address" label={t('field_email')}>
+                  <Input className="h-10 rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} md={12} className="space-y-4">
+                <Form.Item
+                  name="facebook_page"
+                  label={t('field_facebook')}
+                  rules={[{ required: true, message: t('field_facebook') }]}
+                >
+                  <Input className="h-10 rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+
+                <Form.Item name="other_pages" label={t('field_other_pages')}>
+                  <Input className="h-10 rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Section 4: The Scientific and Qur'anic Background */}
+          <Card bordered={true} className="border-slate-200 rounded-xl shadow-none" title={<span className="font-bold text-base text-slate-700">The Scientific and Qur'anic Background</span>}>
+            <Row gutter={24}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="how_many_quran"
+                  label={t('field_quran_memory')}
+                  rules={[{ required: true, message: t('field_quran_memory') }]}
+                >
+                  <Select
+                    style={{ height: 40 }}
+                    placeholder="اختيار مقدار الحفظ"
+                    options={[
+                      { value: 'القرآن الكريم كاملا', label: 'القرآن الكريم كاملا' },
+                      { value: 'ثلاثة أرباع القرآن', label: 'ثلاثة أرباع القرآن' },
+                      { value: 'نصف القرآن', label: 'نصف القرآن' },
+                      { value: 'ثلث القرآن', label: 'ثلث القرآن' },
+                      { value: 'ربع القرآن', label: 'ربع القرآن' },
+                      { value: 'أقل من الربع', label: 'أقل من الربع' },
+                    ]}
+                    className="rounded-lg"
+                  />
+                </Form.Item>
+              </Col>
+
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="markez_tahfed"
+                  label={t('field_markez')}
+                  rules={[{ required: true, message: t('field_markez') }]}
+                >
+                  <LinkSelect doctype="memorization_center" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Section 5: Qualifications and Certifications */}
+          <Card bordered={true} className="border-slate-200 rounded-xl shadow-none" title={<span className="font-bold text-base text-slate-700">Qualifications and Certifications</span>}>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-slate-600 font-bold text-sm">Academic Qualifications</span>
+                <Button type="default" size="middle" icon={<PlusOutlined />} onClick={addQualification} className="rounded-lg border-slate-300 font-semibold text-slate-700 hover:text-slate-900 h-9">
+                  Add Row
+                </Button>
               </div>
-            </Card>
-          </TabPane>
+              
+              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
+                      <th className="p-3 w-12 text-center">No.</th>
+                      <th className="p-3">{t('field_cert_type')} *</th>
+                      <th className="p-3">{t('field_specialization')} *</th>
+                      <th className="p-3">{t('field_cert_date')}</th>
+                      <th className="p-3">{t('field_issuing_authority')} *</th>
+                      <th className="p-3 w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {qualifications.map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/50">
+                        <td className="p-2 text-center text-slate-500 font-medium">{idx + 1}</td>
+                        <td className="p-2">
+                          <Select
+                            value={row.certificate_type || undefined}
+                            onChange={(val) => updateQualificationRow(idx, 'certificate_type', val)}
+                            placeholder="اختر نوع المؤهل العلمي"
+                            style={{ width: '100%', height: 38 }}
+                            options={[
+                              { value: 'بكالوريس', label: 'بكالوريس' },
+                              { value: 'دبلوم عالي', label: 'دبلوم عالي' },
+                              { value: 'دبلوم متوسط', label: 'دبلوم متوسط' },
+                            ]}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <LinkSelect
+                            doctype="Specialization"
+                            value={row.specialization}
+                            onChange={(val) => updateQualificationRow(idx, 'specialization', val)}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <DatePicker
+                            value={row.date_of_obtaining_the_certificate ? dayjs(row.date_of_obtaining_the_certificate) : null}
+                            onChange={(date) => updateQualificationRow(idx, 'date_of_obtaining_the_certificate', date ? date.format('YYYY-MM-DD') : '')}
+                            style={{ width: '100%', height: 38 }}
+                            className="rounded-lg"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <LinkSelect
+                            doctype="Issuing_Authority"
+                            value={row.issuing_authority}
+                            onChange={(val) => updateQualificationRow(idx, 'issuing_authority', val)}
+                          />
+                        </td>
+                        <td className="p-2 text-center">
+                          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setQualifications(qualifications.filter((_, i) => i !== idx))} />
+                        </td>
+                      </tr>
+                    ))}
+                    {qualifications.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="text-center text-slate-400 py-8 font-medium">No Data</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Card>
 
-          {/* TAB 2: SCIENTIFIC BACKGROUND */}
-          <TabPane tab={t('scientific_background')} key="scientific">
-            <Card bordered={false} className="border border-slate-100 rounded-xl">
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="how_many_quran"
-                    label={t('field_quran_memory')}
-                    rules={[{ required: true, message: t('field_quran_memory') }]}
-                  >
-                    <Select
-                      style={{ height: 40 }}
-                      options={[
-                        { value: 'القرآن الكريم كاملا', label: 'القرآن الكريم كاملا' },
-                        { value: 'ثلاثة أرباع القرآن', label: 'ثلاثة أرباع القرآن' },
-                        { value: 'نصف القرآن', label: 'نصف القرآن' },
-                        { value: 'ثلث القرآن', label: 'ثلث القرآن' },
-                        { value: 'ربع القرآن', label: 'ربع القرآن' },
-                        { value: 'أقل من الربع', label: 'أقل من الربع' },
-                      ]}
-                      className="rounded-lg"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="markez_tahfed"
-                    label={t('field_markez')}
-                    rules={[{ required: true, message: t('field_markez') }]}
-                  >
-                    <LinkSelect doctype="memorization_center" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              {/* Qualifications Table */}
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-base font-bold text-slate-700 m-0">{t('field_qualifications')}</h3>
-                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addQualification} className="rounded-lg">
-                    {t('add_row')}
+          {/* Section 6: Sheikhs and Books */}
+          <Card bordered={true} className="border-slate-200 rounded-xl shadow-none" title={<span className="font-bold text-base text-slate-700">Sheikhs and Books</span>}>
+            <Row gutter={24}>
+              {/* Scholars list */}
+              <Col xs={24} md={12} className="space-y-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-600 font-bold text-sm">Who were the scholars from whom you studied?</span>
+                  <Button type="default" size="middle" icon={<PlusOutlined />} onClick={addScholar} className="rounded-lg border-slate-300 font-semibold text-slate-700 h-9">
+                    Add Row
                   </Button>
                 </div>
                 
-                <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-600 uppercase border-b border-slate-100">
-                        <th className="p-3">{t('field_cert_type')}</th>
-                        <th className="p-3">{t('field_specialization')}</th>
-                        <th className="p-3">{t('field_cert_date')}</th>
-                        <th className="p-3">{t('field_issuing_authority')}</th>
+                      <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
+                        <th className="p-3">{t('field_sheikh_name')} *</th>
                         <th className="p-3 w-12"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {qualifications.map((row, idx) => (
+                    <tbody className="divide-y divide-slate-200">
+                      {scholarsList.map((row, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50">
                           <td className="p-2">
-                            <Select
-                              value={row.certificate_type}
-                              onChange={(val) => updateQualificationRow(idx, 'certificate_type', val)}
-                              style={{ width: '100%' }}
-                              options={[
-                                { value: 'بكالوريس', label: 'بكالوريس' },
-                                { value: 'دبلوم عالي', label: 'دبلوم عالي' },
-                                { value: 'دبلوم متوسط', label: 'دبلوم متوسط' },
-                              ]}
-                            />
-                          </td>
-                          <td className="p-2">
                             <LinkSelect
-                              doctype="Specialization"
-                              value={row.specialization}
-                              onChange={(val) => updateQualificationRow(idx, 'specialization', val)}
-                            />
-                          </td>
-                          <td className="p-2">
-                            <DatePicker
-                              value={row.date_of_obtaining_the_certificate ? dayjs(row.date_of_obtaining_the_certificate) : null}
-                              onChange={(date) => updateQualificationRow(idx, 'date_of_obtaining_the_certificate', date ? date.format('YYYY-MM-DD') : '')}
-                              style={{ width: '100%' }}
-                            />
-                          </td>
-                          <td className="p-2">
-                            <LinkSelect
-                              doctype="Issuing_Authority"
-                              value={row.issuing_authority}
-                              onChange={(val) => updateQualificationRow(idx, 'issuing_authority', val)}
+                              doctype="Shaikh_Name"
+                              value={row.shaikh}
+                              onChange={(val) => updateScholarRow(idx, val)}
                             />
                           </td>
                           <td className="p-2 text-center">
-                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => deleteQualification(idx)} />
+                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setScholarsList(scholarsList.filter((_, i) => i !== idx))} />
                           </td>
                         </tr>
                       ))}
-                      {qualifications.length === 0 && (
+                      {scholarsList.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center text-slate-400 py-6">{t('empty_members')}</td>
+                          <td colSpan={2} className="text-center text-slate-400 py-8 font-medium">No Data</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </Card>
-          </TabPane>
+              </Col>
 
-          {/* TAB 3: STUDY DETAILS */}
-          <TabPane tab={t('sheikhs_books')} key="study">
-            <Card bordered={false} className="border border-slate-100 rounded-xl">
-              <div className="mb-8">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-base font-bold text-slate-700 m-0">{t('field_books_studied')}</h3>
-                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addBookStudied} className="rounded-lg">
-                    {t('add_row')}
+              {/* Books studied list */}
+              <Col xs={24} md={12} className="space-y-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-600 font-bold text-sm">Which books did I study, and under which scholars?</span>
+                  <Button type="default" size="middle" icon={<PlusOutlined />} onClick={addBookStudied} className="rounded-lg border-slate-300 font-semibold text-slate-700 h-9">
+                    Add Row
                   </Button>
                 </div>
                 
-                <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-600 uppercase border-b border-slate-100">
-                        <th className="p-3">{t('field_sheikh_name')}</th>
-                        <th className="p-3">{t('field_book_name')}</th>
+                      <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
+                        <th className="p-3">{t('field_sheikh_name')} *</th>
+                        <th className="p-3">{t('field_book_name')} *</th>
                         <th className="p-3">{t('field_publication')}</th>
                         <th className="p-3 w-12"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-200">
                       {booksStudied.map((row, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50">
                           <td className="p-2">
@@ -529,10 +576,10 @@ export const WaedInfoForm: React.FC = () => {
                           </td>
                           <td className="p-2">
                             <Input
-                              value={row.publication_of_the_book}
+                              value={row.publication_of_the_book || ''}
                               onChange={(e) => updateBookRow(idx, 'publication_of_the_book', e.target.value)}
-                              placeholder="Publisher/Edition"
-                              className="h-8 rounded"
+                              placeholder="Publication of the book..."
+                              className="h-[38px] rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500"
                             />
                           </td>
                           <td className="p-2 text-center">
@@ -542,134 +589,102 @@ export const WaedInfoForm: React.FC = () => {
                       ))}
                       {booksStudied.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="text-center text-slate-400 py-6">{t('empty_members')}</td>
+                          <td colSpan={4} className="text-center text-slate-400 py-8 font-medium">No Data</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Col>
+            </Row>
+          </Card>
 
-              {/* Scholars List Table */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-base font-bold text-slate-700 m-0">{t('field_scholars_list')}</h3>
-                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addScholar} className="rounded-lg">
-                    {t('add_row')}
+          {/* Section 7: Outreach and Teaching Activities */}
+          <Card bordered={true} className="border-slate-200 rounded-xl shadow-none" title={<span className="font-bold text-base text-slate-700">Outreach and Teaching Activities</span>}>
+            <Row gutter={24}>
+              {/* Subjects to teach */}
+              <Col xs={24} md={12} className="space-y-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-slate-600 font-bold text-sm">The subjects you tend to teach:</span>
+                  <Button type="default" size="middle" icon={<PlusOutlined />} onClick={addSubject} className="rounded-lg border-slate-300 font-semibold text-slate-700 h-9">
+                    Add Row
                   </Button>
                 </div>
                 
-                <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-600 uppercase border-b border-slate-100">
-                        <th className="p-3">{t('field_sheikh_name')}</th>
+                      <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
+                        <th className="p-3">{t('field_subject')} *</th>
                         <th className="p-3 w-12"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {scholarsList.map((row, idx) => (
+                    <tbody className="divide-y divide-slate-200">
+                      {subjectsList.map((row, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50">
                           <td className="p-2">
                             <LinkSelect
-                              doctype="Shaikh_Name"
-                              value={row.shaikh}
-                              onChange={(val) => updateScholarRow(idx, val)}
+                              doctype="subjects"
+                              value={row.subjecte_name}
+                              onChange={(val) => updateSubjectRow(idx, val)}
                             />
                           </td>
                           <td className="p-2 text-center">
-                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setScholarsList(scholarsList.filter((_, i) => i !== idx))} />
+                            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setSubjectsList(subjectsList.filter((_, i) => i !== idx))} />
                           </td>
                         </tr>
                       ))}
-                      {scholarsList.length === 0 && (
+                      {subjectsList.length === 0 && (
                         <tr>
-                          <td colSpan={2} className="text-center text-slate-400 py-6">{t('empty_members')}</td>
+                          <td colSpan={2} className="text-center text-slate-400 py-8 font-medium">No Data</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </Card>
-          </TabPane>
+              </Col>
 
-          {/* TAB 4: OUTREACH & TEACHING */}
-          <TabPane tab={t('outreach_signature')} key="outreach">
-            <Card bordered={false} className="border border-slate-100 rounded-xl">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-base font-bold text-slate-700 m-0">{t('field_teach_subjects')}</h3>
-                      <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addSubject} className="rounded-lg">
-                        {t('add_row')}
-                      </Button>
-                    </div>
-                    
-                    <div className="overflow-x-auto border border-slate-100 rounded-xl mb-4">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 text-inline-start text-xs font-bold text-slate-600 uppercase border-b border-slate-100">
-                            <th className="p-3">{t('field_subject')}</th>
-                            <th className="p-3 w-12"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {subjectsList.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50/50">
-                              <td className="p-2">
-                                <LinkSelect
-                                  doctype="subjects"
-                                  value={row.subjecte_name}
-                                  onChange={(val) => updateSubjectRow(idx, val)}
-                                />
-                              </td>
-                              <td className="p-2 text-center">
-                                <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setSubjectsList(subjectsList.filter((_, i) => i !== idx))} />
-                              </td>
-                            </tr>
-                          ))}
-                          {subjectsList.length === 0 && (
-                            <tr>
-                              <td colSpan={2} className="text-center text-slate-400 py-6">{t('empty_members')}</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+              {/* Recommendations textarea */}
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="recommendations"
+                  label={<span className="font-semibold text-slate-600 text-sm">Recommendations, licenses, and academic certificates and their dates *</span>}
+                  rules={[{ required: true, message: t('field_recommendations') }]}
+                >
+                  <Input.TextArea rows={6} className="rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={24} className="mt-6">
+              {/* Lessons attended textarea */}
+              <Col xs={24} md={12}>
+                <Form.Item
+                  name="attended_lessons"
+                  label={<span className="font-semibold text-slate-600 text-sm">The lessons and lectures that you attended, including the last lesson or lecture and the name of the sheik? *</span>}
+                  rules={[{ required: true, message: t('field_lessons_attended') }]}
+                >
+                  <Input.TextArea rows={6} className="rounded-lg bg-slate-50 border-slate-200 hover:border-indigo-500" />
+                </Form.Item>
+              </Col>
+
+              {/* Signature field */}
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label={<span className="font-semibold text-slate-600 text-sm">Signature of the concerned person</span>}
+                  required
+                >
+                  <div className="border border-slate-200 rounded-xl bg-slate-50 p-4 flex flex-col items-center">
+                    <SignaturePad value={signature} onChange={setSignature} />
+                    {!signature && (
+                      <span className="text-red-500 text-xs mt-2">{t('signature_required')}</span>
+                    )}
                   </div>
-
-                  <Form.Item
-                    name="recommendations"
-                    label={t('field_recommendations')}
-                    rules={[{ required: true, message: t('field_recommendations') }]}
-                  >
-                    <Input.TextArea rows={4} className="rounded-lg" />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="attended_lessons"
-                    label={t('field_lessons_attended')}
-                    rules={[{ required: true, message: t('field_lessons_attended') }]}
-                  >
-                    <Input.TextArea rows={4} className="rounded-lg" />
-                  </Form.Item>
-                </div>
-
-                <div className="flex flex-col items-center border-l pl-6 pr-6">
-                  <h3 className="text-base font-bold text-slate-700 w-full mb-4 text-center">
-                    {t('field_signature')}
-                  </h3>
-                  <SignaturePad value={signature} onChange={setSignature} />
-                  {!signature && (
-                    <p className="text-red-500 mt-2 text-xs">{t('signature_required')}</p>
-                  )}
-                </div>
-              </div>
-            </Card>
-          </TabPane>
-        </Tabs>
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+        </div>
       </Form>
     </div>
   );
