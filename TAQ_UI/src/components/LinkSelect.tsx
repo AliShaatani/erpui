@@ -129,7 +129,7 @@ export const LinkSelect: React.FC<LinkSelectProps> = ({
         filterOption={false}
         onSearch={(val) => setSearchQuery(val)}
         onChange={(val) => onChange && onChange(val)}
-        notFoundContent={isValidating ? <Spin size="small" /> : null}
+        notFoundContent={isValidating ? <Spin size="small" /> : <div style={{ padding: '8px 12px', color: '#94a3b8', fontSize: '13px' }}>{t('no_data')}</div>}
         options={options}
         style={{ width: '100%', ...style }}
         allowClear
