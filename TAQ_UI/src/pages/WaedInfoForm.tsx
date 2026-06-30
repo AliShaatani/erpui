@@ -20,10 +20,11 @@ export const WaedInfoForm: React.FC = () => {
   const { updateDoc } = useFrappeUpdateDoc();
   const { upload } = useFrappeFileUpload();
 
-  // Load existing doc (Passing null when creating new doc prevents API list calls)
+  // Load existing doc (Passing null as swrKey when creating new doc prevents SWR fetching)
   const { data: preacherData, isLoading, mutate } = useFrappeGetDoc(
     'waed_info',
-    isEdit ? name : null,
+    isEdit ? name : undefined,
+    isEdit ? `waed_info_${name}` : null,
     { revalidateOnFocus: false }
   );
 

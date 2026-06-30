@@ -23,7 +23,8 @@ export const ExamGroupForm: React.FC = () => {
 
   const { data: examGroupData, isLoading } = useFrappeGetDoc(
     'exam_group_date',
-    isEdit ? name : '',
+    isEdit ? name : undefined,
+    isEdit ? `exam_group_date_${name}` : null,
     { revalidateOnFocus: false }
   );
 

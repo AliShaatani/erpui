@@ -17,7 +17,8 @@ export const ExamLagForm: React.FC = () => {
 
   const { data: committeeData, isLoading } = useFrappeGetDoc(
     'exam_lag_data',
-    isEdit ? name : '',
+    isEdit ? name : undefined,
+    isEdit ? `exam_lag_data_${name}` : null,
     { revalidateOnFocus: false }
   );
 
